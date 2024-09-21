@@ -97,7 +97,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         subprocess.run(ffmpeg_command, check=True)
 
         print(f"Video saved to {video_path}")
-        print(video_path)  # This will be the last line of output
+        print(f"FINAL_VIDEO_PATH:{video_path}")  # Add this line
         
         # Clean up individual frame files
         for file in os.listdir(frames_dir):
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     video_path = generate_video(image_path, prompt, num_frames, frame_rate)
     if video_path:
-        print(video_path)  # This ensures the video path is the last output
+        print(f"FINAL_VIDEO_PATH:{video_path}")  # Add this line
     else:
         print("Failed to generate video")
         sys.exit(1)

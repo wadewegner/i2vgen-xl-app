@@ -3,9 +3,8 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { PythonShell } = require("python-shell");
-const http = require("http");
 const WebSocket = require("ws");
-require("dotenv").config();
+const http = require("http");
 
 const app = express();
 const server = http.createServer(app);
@@ -67,10 +66,13 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
 
   console.log("Starting video generation process");
 
+  let pythonOutput = [];
+
   const pyshell = new PythonShell("videoGenerator.py", options);
 
   pyshell.on("message", function (message) {
     console.log("Python output:", message);
+    pythonOutput.push(message);
     // Broadcast the message to all connected clients
     wss.clients.forEach(function each(client) {
       if (client.readyState === WebSocket.OPEN) {
@@ -87,21 +89,27 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
         .json({ error: "An error occurred while generating the video" });
     }
     console.log("Python script finished");
-    console.log("Raw output:", code);
+    console.log("Raw output:", pythonOutput);
 
-    // Get the last output from the Python script
-    const lastOutput = pyshell.lastOutput;
-    console.log("Last Python output:", lastOutput);
+    // Get the last output line that starts with 'uploads/'
+    const videoPath = pythonOutput
+      .reverse()
+      .find((line) => line.startsWith("uploads/"));
+    console.log("Video path:", videoPath);
 
-    if (lastOutput && lastOutput.startsWith("uploads/")) {
-      const videoUrl = "/" + lastOutput.trim();
+    if (videoPath) {
+      const videoUrl = "/" + videoPath.trim();
       console.log("Video URL:", videoUrl);
       res.json({ videoUrl: videoUrl });
     } else {
-      console.error("Invalid video path:", lastOutput);
+      console.error("Invalid video path:", videoPath);
       res.status(500).json({ error: "Failed to generate video" });
     }
   });
+});
+
+server.listen(3000, () => {
+  console.log("Server is running on port 3000");
 });
 
 app.get("/uploads/:filename", (req, res) => {
