@@ -2,14 +2,10 @@ import sys
 import os
 from dotenv import load_dotenv
 import torch
+import torch.amp
 from diffusers import I2VGenXLPipeline
 from PIL import Image
-import logging
 import subprocess
-import torch.amp 
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load environment variables
 load_dotenv()
@@ -45,9 +41,9 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
             "ali-vilab/i2vgen-xl", 
             torch_dtype=dtype, 
             variant="fp16" if use_cuda else None, 
-            token=token  # Changed from use_auth_token to token
+            token=token
         )
-
+        
         if use_cuda:
             print("Moving pipeline to GPU and enabling memory efficient attention")
             pipeline = pipeline.to("cuda")
@@ -101,6 +97,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         subprocess.run(ffmpeg_command, check=True)
 
         print(f"Video saved to {video_path}")
+        print(video_path)  # This will be the last line of output
         
         # Clean up individual frame files
         for file in os.listdir(frames_dir):
@@ -128,7 +125,7 @@ if __name__ == "__main__":
 
     video_path = generate_video(image_path, prompt, num_frames, frame_rate)
     if video_path:
-        print(video_path)
+        print(video_path)  # This ensures the video path is the last output
     else:
         print("Failed to generate video")
         sys.exit(1)

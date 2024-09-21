@@ -87,21 +87,18 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
         .json({ error: "An error occurred while generating the video" });
     }
     console.log("Python script finished");
-    console.log("Raw output:", code); // Add this line for debugging
+    console.log("Raw output:", code);
 
-    // Check if code is a string or an array
-    let outputLines = Array.isArray(code) ? code : code.split("\n");
-    outputLines = outputLines.filter((line) => line.trim() !== "");
+    // Get the last output from the Python script
+    const lastOutput = pyshell.lastOutput;
+    console.log("Last Python output:", lastOutput);
 
-    const videoPath = outputLines[outputLines.length - 1];
-    console.log("Parsed video path:", videoPath); // Add this line for debugging
-
-    if (videoPath && videoPath.startsWith("uploads/")) {
-      const videoUrl = "/" + videoPath; // Add leading slash
-      console.log("Video URL:", videoUrl); // Add this line for debugging
+    if (lastOutput && lastOutput.startsWith("uploads/")) {
+      const videoUrl = "/" + lastOutput.trim();
+      console.log("Video URL:", videoUrl);
       res.json({ videoUrl: videoUrl });
     } else {
-      console.error("Invalid video path:", videoPath);
+      console.error("Invalid video path:", lastOutput);
       res.status(500).json({ error: "Failed to generate video" });
     }
   });
