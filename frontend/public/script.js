@@ -1,7 +1,11 @@
 let socket;
 
 function connectWebSocket() {
-  socket = new WebSocket("ws://" + window.location.host);
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.host;
+  const wsUrl = `${protocol}//${host}`;
+  console.log(`Attempting to connect to WebSocket at ${wsUrl}`);
+  socket = new WebSocket(wsUrl);
 
   socket.onopen = function (event) {
     console.log("WebSocket connection established");
@@ -22,12 +26,6 @@ function connectWebSocket() {
   socket.onerror = function (error) {
     console.error("WebSocket error:", error);
   };
-}
-
-function appendLog(message) {
-  const logDiv = document.getElementById("logOutput");
-  logDiv.innerHTML += message + "<br>";
-  logDiv.scrollTop = logDiv.scrollHeight;
 }
 
 connectWebSocket();
