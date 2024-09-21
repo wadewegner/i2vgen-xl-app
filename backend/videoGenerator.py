@@ -52,7 +52,6 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
             logging.info("Moving pipeline to GPU and enabling memory efficient attention")
             pipeline = pipeline.to("cuda")
             pipeline.enable_attention_slicing()
-            pipeline.enable_gradient_checkpointing()
         else:
             logging.info("Using CPU for inference")
             pipeline = pipeline.to("cpu")
