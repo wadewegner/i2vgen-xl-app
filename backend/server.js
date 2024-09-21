@@ -87,9 +87,13 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
         .json({ error: "An error occurred while generating the video" });
     }
     console.log("Python script finished");
-    const videoUrl = code; // Assuming the last line of output is the video URL
+    const videoUrl = "/uploads/" + path.basename(code); // Assuming the last line of output is the video path
     res.json({ videoUrl: videoUrl });
   });
+});
+
+wss.on("connection", function connection(ws) {
+  console.log("New WebSocket connection");
 });
 
 server.listen(port, () => {

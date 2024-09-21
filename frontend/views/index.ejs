@@ -10,9 +10,16 @@
     <div class="container">
       <h1>I2VGen-XL Video Generator</h1>
       <form id="uploadForm">
-        <input type="file" id="imageInput" accept="image/*" required />
+        <input
+          type="file"
+          id="imageInput"
+          name="image"
+          accept="image/*"
+          required
+        />
         <textarea
           id="promptInput"
+          name="prompt"
           placeholder="Enter your text prompt"
           required
         ></textarea>
@@ -43,6 +50,7 @@
       <div
         id="logOutput"
         style="
+          display: none;
           height: 200px;
           overflow-y: scroll;
           border: 1px solid #ccc;

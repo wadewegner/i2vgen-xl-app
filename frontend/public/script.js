@@ -3,6 +3,10 @@ let socket;
 function connectWebSocket() {
   socket = new WebSocket("ws://" + window.location.host);
 
+  socket.onopen = function (event) {
+    console.log("WebSocket connection established");
+  };
+
   socket.onmessage = function (event) {
     const data = JSON.parse(event.data);
     if (data.type === "log") {
@@ -31,14 +35,15 @@ connectWebSocket();
 document.getElementById("uploadForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const formData = new FormData();
-  formData.append("image", document.getElementById("imageInput").files[0]);
-  formData.append("prompt", document.getElementById("promptInput").value);
-  formData.append("numFrames", document.getElementById("numFrames").value);
-  formData.append("frameRate", document.getElementById("frameRate").value);
+  const formData = new FormData(e.target);
 
   // Clear previous log output
   document.getElementById("logOutput").innerHTML = "";
+  document.getElementById("logOutput").style.display = "block";
+
+  // Disable the submit button
+  const submitButton = e.target.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
 
   try {
     const response = await fetch("/generate-video", {
@@ -72,5 +77,8 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
   } catch (error) {
     console.error("Error:", error);
     alert(`An error occurred: ${error.message}`);
+  } finally {
+    // Re-enable the submit button
+    submitButton.disabled = false;
   }
 });
