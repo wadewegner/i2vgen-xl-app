@@ -4,6 +4,8 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
   const formData = new FormData();
   formData.append("image", document.getElementById("imageInput").files[0]);
   formData.append("prompt", document.getElementById("promptInput").value);
+  formData.append("numFrames", document.getElementById("numFrames").value);
+  formData.append("frameRate", document.getElementById("frameRate").value);
 
   try {
     const response = await fetch("/generate-video", {

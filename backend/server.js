@@ -45,7 +45,7 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
     return res.status(400).json({ error: "No file uploaded" });
   }
 
-  const { prompt } = req.body;
+  const { prompt, numFrames, frameRate } = req.body;
   const imagePath = req.file.path;
 
   let options = {
@@ -53,7 +53,7 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
     pythonPath: "python3",
     pythonOptions: ["-u"],
     scriptPath: path.join(__dirname),
-    args: [imagePath, prompt],
+    args: [imagePath, prompt, numFrames, frameRate],
     env: {
       ...process.env,
       PYTHONUNBUFFERED: "1",

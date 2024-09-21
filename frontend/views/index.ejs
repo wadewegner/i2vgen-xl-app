@@ -16,6 +16,28 @@
           placeholder="Enter your text prompt"
           required
         ></textarea>
+        <div>
+          <label for="numFrames">Number of Frames:</label>
+          <input
+            type="number"
+            id="numFrames"
+            name="numFrames"
+            value="50"
+            min="16"
+            max="200"
+          />
+        </div>
+        <div>
+          <label for="frameRate">Frame Rate (fps):</label>
+          <input
+            type="number"
+            id="frameRate"
+            name="frameRate"
+            value="10"
+            min="1"
+            max="30"
+          />
+        </div>
         <button type="submit">Generate Video</button>
       </form>
       <div id="result" style="display: none">

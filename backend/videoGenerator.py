@@ -21,7 +21,7 @@ def check_cuda_gpu():
         for i in range(torch.cuda.device_count()):
             logging.info(f"GPU {i}: {torch.cuda.get_device_name(i)}")
 
-def generate_video(image_path, prompt):
+def generate_video(image_path, prompt, num_frames, frame_rate):
     try:
         logging.info("Starting video generation process")
         check_cuda_gpu()
@@ -55,11 +55,12 @@ def generate_video(image_path, prompt):
         negative_prompt = "Distorted, discontinuous, Ugly, blurry, low resolution, motionless, static, disfigured, disconnected limbs, Ugly faces, incomplete arms"
         generator = torch.manual_seed(8888)
 
-        logging.info("Generating video frames")
+        logging.info(f"Generating video frames: {num_frames} frames")
         frames = pipeline(
             prompt=prompt,
             image=image,
             num_inference_steps=50,
+            num_frames=int(num_frames),
             negative_prompt=negative_prompt,
             guidance_scale=9.0,
             generator=generator
@@ -75,7 +76,7 @@ def generate_video(image_path, prompt):
         video_path = os.path.join('uploads', f"generated_video_{os.path.basename(image_path)}.mp4")
         ffmpeg_command = [
             'ffmpeg',
-            '-framerate', '10',  # Adjust this value to change video speed
+            '-framerate', str(frame_rate),
             '-i', os.path.join(frames_dir, 'frame_%04d.png'),
             '-c:v', 'libx264',
             '-pix_fmt', 'yuv420p',
@@ -97,18 +98,20 @@ def generate_video(image_path, prompt):
         return None
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        logging.error("Usage: python videoGenerator.py <image_path> <prompt>")
+    if len(sys.argv) != 5:
+        logging.error("Usage: python videoGenerator.py <image_path> <prompt> <num_frames> <frame_rate>")
         sys.exit(1)
 
     image_path = sys.argv[1]
     prompt = sys.argv[2]
+    num_frames = int(sys.argv[3])
+    frame_rate = float(sys.argv[4])
 
     if not os.path.exists(image_path):
         logging.error(f"Error: Image file not found: {image_path}")
         sys.exit(1)
 
-    video_path = generate_video(image_path, prompt)
+    video_path = generate_video(image_path, prompt, num_frames, frame_rate)
     if video_path:
         print(video_path)
     else:
