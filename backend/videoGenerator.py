@@ -14,52 +14,52 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 
 def check_cuda_gpu():
-    logging.info(f"CUDA available: {torch.cuda.is_available()}")
-    logging.info(f"CUDA version: {torch.version.cuda}")
-    logging.info(f"Number of GPUs: {torch.cuda.device_count()}")
+    print(f"CUDA available: {torch.cuda.is_available()}")
+    print(f"CUDA version: {torch.version.cuda}")
+    print(f"Number of GPUs: {torch.cuda.device_count()}")
     if torch.cuda.is_available():
         for i in range(torch.cuda.device_count()):
-            logging.info(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+            print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
 
 def generate_video(image_path, prompt, num_frames, frame_rate):
     try:
-        logging.info("Starting video generation process")
+        print("Starting video generation process")
         check_cuda_gpu()
 
         use_cuda = os.getenv('USE_CUDA', 'false').lower() == 'true'
         device = "cuda" if use_cuda and torch.cuda.is_available() else "cpu"
-        logging.info(f"Using device: {device}")
+        print(f"Using device: {device}")
 
         token = os.getenv('HUGGINGFACE_TOKEN')
         if not token:
             raise ValueError("HUGGINGFACE_TOKEN not found in environment variables")
         
-        logging.info(f"Hugging Face Token: {token[:5]}...{token[-5:]}")
+        print(f"Hugging Face Token: {token[:5]}...{token[-5:]}")
 
         dtype = torch.float16 if use_cuda else torch.float32
-        logging.info(f"Using dtype: {dtype}")
+        print(f"Using dtype: {dtype}")
 
-        logging.info("Loading I2VGenXLPipeline")
+        print("Loading I2VGenXLPipeline")
         pipeline = I2VGenXLPipeline.from_pretrained("ali-vilab/i2vgen-xl", torch_dtype=dtype, variant="fp16" if use_cuda else None, use_auth_token=token)
         
         if use_cuda:
-            logging.info("Moving pipeline to GPU and enabling memory efficient attention")
+            print("Moving pipeline to GPU and enabling memory efficient attention")
             pipeline = pipeline.to("cuda")
             pipeline.enable_attention_slicing()
         else:
-            logging.info("Using CPU for inference")
+            print("Using CPU for inference")
             pipeline = pipeline.to("cpu")
 
-        logging.info(f"Loading image from {image_path}")
+        print(f"Loading image from {image_path}")
         image = Image.open(image_path).convert("RGB")
 
         negative_prompt = "Distorted, discontinuous, Ugly, blurry, low resolution, motionless, static, disfigured, disconnected limbs, Ugly faces, incomplete arms"
         generator = torch.manual_seed(8888)
 
-        logging.info(f"Generating video frames: {num_frames} frames")
-        logging.info(f"CUDA available: {torch.cuda.is_available()}")
-        logging.info(f"Current device: {torch.cuda.current_device()}")
-        logging.info(f"Device name: {torch.cuda.get_device_name(0)}")
+        print(f"Generating video frames: {num_frames} frames")
+        print(f"CUDA available: {torch.cuda.is_available()}")
+        print(f"Current device: {torch.cuda.current_device()}")
+        print(f"Device name: {torch.cuda.get_device_name(0)}")
 
         with torch.cuda.amp.autocast(enabled=use_cuda):
             frames = pipeline(
@@ -72,7 +72,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
                 generator=generator
             ).frames[0]
 
-        logging.info("Video frame generation complete")
+        print("Video frame generation complete")
 
         # Save frames as individual PNG files
         frames_dir = os.path.join('uploads', 'frames')
@@ -93,21 +93,21 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         ]
         subprocess.run(ffmpeg_command, check=True)
 
-        logging.info(f"Video saved to {video_path}")
+        print(f"Video saved to {video_path}")
         
         # Clean up individual frame files
         for file in os.listdir(frames_dir):
             os.remove(os.path.join(frames_dir, file))
         os.rmdir(frames_dir)
 
-        return '/uploads/' + os.path.basename(video_path)
+        return video_path
     except Exception as e:
-        logging.error(f"Error in generate_video: {str(e)}", exc_info=True)
+        print(f"Error in generate_video: {str(e)}")
         return None
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:
-        logging.error("Usage: python videoGenerator.py <image_path> <prompt> <num_frames> <frame_rate>")
+        print("Usage: python videoGenerator.py <image_path> <prompt> <num_frames> <frame_rate>")
         sys.exit(1)
 
     image_path = sys.argv[1]
@@ -116,12 +116,12 @@ if __name__ == "__main__":
     frame_rate = float(sys.argv[4])
 
     if not os.path.exists(image_path):
-        logging.error(f"Error: Image file not found: {image_path}")
+        print(f"Error: Image file not found: {image_path}")
         sys.exit(1)
 
     video_path = generate_video(image_path, prompt, num_frames, frame_rate)
     if video_path:
         print(video_path)
     else:
-        logging.error("Failed to generate video")
+        print("Failed to generate video")
         sys.exit(1)

@@ -70,7 +70,7 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
   const pyshell = new PythonShell("videoGenerator.py", options);
 
   pyshell.on("message", function (message) {
-    console.log(message);
+    console.log("Python output:", message);
     // Broadcast the message to all connected clients
     wss.clients.forEach(function each(client) {
       if (client.readyState === WebSocket.OPEN) {
@@ -87,8 +87,16 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
         .json({ error: "An error occurred while generating the video" });
     }
     console.log("Python script finished");
-    const videoUrl = "/uploads/" + path.basename(code); // Assuming the last line of output is the video path
-    res.json({ videoUrl: videoUrl });
+    // Assuming the last line of the output is the video path
+    const outputLines = code.split("\n").filter((line) => line.trim() !== "");
+    const videoPath = outputLines[outputLines.length - 1];
+    if (videoPath && videoPath.startsWith("/uploads/")) {
+      const videoUrl = videoPath;
+      res.json({ videoUrl: videoUrl });
+    } else {
+      console.error("Invalid video path:", videoPath);
+      res.status(500).json({ error: "Failed to generate video" });
+    }
   });
 });
 
