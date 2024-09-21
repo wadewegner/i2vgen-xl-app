@@ -28,6 +28,12 @@ function connectWebSocket() {
   };
 }
 
+function appendLog(message) {
+  const logDiv = document.getElementById("logOutput");
+  logDiv.innerHTML += message + "<br>";
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
 connectWebSocket();
 
 document.getElementById("uploadForm").addEventListener("submit", async (e) => {

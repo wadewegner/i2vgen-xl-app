@@ -100,6 +100,12 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
   });
 });
 
+// Add this route to serve video files
+app.get("/uploads/:filename", (req, res) => {
+  const filePath = path.join(__dirname, "..", "uploads", req.params.filename);
+  res.sendFile(filePath);
+});
+
 wss.on("connection", function connection(ws) {
   console.log("New WebSocket connection");
 });
