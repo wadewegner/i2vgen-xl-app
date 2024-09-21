@@ -63,17 +63,21 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
 
         print("Starting pipeline execution")
         with torch.cuda.amp.autocast(enabled=use_cuda):
-            for step in range(50):  # Assuming 50 inference steps
-                frames = pipeline(
-                    prompt=prompt,
-                    image=image,
-                    num_inference_steps=50,
-                    num_frames=int(num_frames),
-                    negative_prompt=negative_prompt,
-                    guidance_scale=9.0,
-                    generator=generator
-                ).frames[0]
+            # Create a progress callback
+            def callback(step, timestep, latents):
                 print(f"Completed step {step + 1}/50")
+
+            frames = pipeline(
+                prompt=prompt,
+                image=image,
+                num_inference_steps=50,
+                num_frames=int(num_frames),
+                negative_prompt=negative_prompt,
+                guidance_scale=9.0,
+                generator=generator,
+                callback=callback,
+                callback_steps=1
+            ).frames[0]
 
         print("Video frame generation complete")
 
