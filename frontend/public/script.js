@@ -74,10 +74,11 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
       video.oncanplay = function () {
         console.log("Video can start playing");
       };
-      video.load(); // Force the video to load
       document.getElementById("result").style.display = "block";
+    } else if (data.error) {
+      throw new Error(data.error);
     } else {
-      throw new Error("No video URL in response");
+      throw new Error("Unexpected server response");
     }
   } catch (error) {
     console.error("Error:", error);
