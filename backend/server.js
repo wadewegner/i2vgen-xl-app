@@ -56,11 +56,17 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
   const { prompt, numFrames, frameRate } = req.body;
   const imagePath = req.file.path;
 
+  console.log("Received request to generate video:");
+  console.log("Image path:", imagePath);
+  console.log("Prompt:", prompt);
+  console.log("Number of frames:", numFrames);
+  console.log("Frame rate:", frameRate);
+
   let options = {
     mode: "text",
-    pythonPath: "python3",
+    pythonPath: "/root/i2vgen-xl-app/venv/bin/python", // Adjust this path to your virtual environment
     pythonOptions: ["-u"],
-    scriptPath: path.join(__dirname),
+    scriptPath: __dirname,
     args: [imagePath, prompt, numFrames, frameRate],
     env: {
       ...process.env,
@@ -70,66 +76,65 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
 
   console.log("Starting video generation process");
 
-  let pythonOutput = [];
-
-  const pyshell = new PythonShell("videoGenerator.py", options);
-
-  pyshell.on("message", function (message) {
-    console.log("Python output:", message);
-    pythonOutput.push(message);
-    // Broadcast the message to all connected clients
-    wss.clients.forEach(function each(client) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ type: "log", message: message }));
-      }
-    });
-  });
-
-  pyshell.end(function (err, code, signal) {
+  PythonShell.run("videoGenerator.py", options, function (err, results) {
     if (err) {
-      console.error("Python script error:", err);
+      console.error("Error running Python script:", err);
       return res
         .status(500)
         .json({ error: "An error occurred while generating the video" });
     }
-    console.log("Python script finished");
-    console.log("Raw output:", pythonOutput);
 
-    // Get the last output line that starts with 'FINAL_VIDEO_PATH:'
-    const videoPathLine = pythonOutput
-      .reverse()
-      .find((line) => line.startsWith("FINAL_VIDEO_PATH:"));
-    console.log("Video path line:", videoPathLine);
+    console.log("Python script execution completed");
+    console.log("Python script output:", results);
+
+    // Process the results
+    const videoPathLine = results.find((line) =>
+      line.startsWith("FINAL_VIDEO_PATH:")
+    );
 
     if (videoPathLine) {
       const videoPath = videoPathLine.split(":")[1].trim();
+      console.log("Generated video path:", videoPath);
       const videoUrl = "/" + videoPath;
       console.log("Video URL:", videoUrl);
       res.json({ videoUrl: videoUrl });
     } else {
-      console.error("Invalid video path:", videoPathLine);
+      console.error("Video path not found in Python script output");
       res.status(500).json({ error: "Failed to generate video" });
-    }
-  });
-});
-
-// Add this route to serve video files
-app.get("/uploads/:filename", (req, res) => {
-  const filePath = path.join(__dirname, "..", "uploads", req.params.filename);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error("Error sending file:", err);
-      if (!res.headersSent) {
-        res.status(err.status || 500).end();
-      }
     }
   });
 });
 
 wss.on("connection", (ws) => {
   console.log("New WebSocket connection");
+
+  ws.on("message", (message) => {
+    console.log("Received message:", message);
+  });
+
+  ws.on("close", () => {
+    console.log("WebSocket connection closed");
+  });
 });
+
+// Broadcast function to send messages to all connected clients
+function broadcast(message) {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(message));
+    }
+  });
+}
 
 server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
+});
+
+// Error handling
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
 });
