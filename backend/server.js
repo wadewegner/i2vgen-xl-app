@@ -12,15 +12,20 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "../frontend/views"));
 app.use(express.static(path.join(__dirname, "../frontend/public")));
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
+// Serve files from the uploads directory
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
+// Set correct MIME type for mp4 files
+app.use("/uploads", (req, res, next) => {
+  if (path.extname(req.url) === ".mp4") {
+    res.setHeader("Content-Type", "video/mp4");
+  }
+  next();
+});
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadsDir);
+    cb(null, path.join(__dirname, "../uploads"));
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -69,5 +74,5 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:3000`);
+  console.log(`Server running at http://localhost:${port}`);
 });

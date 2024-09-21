@@ -18,7 +18,12 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
     const data = await response.json();
 
     if (data.videoUrl) {
-      document.getElementById("generatedVideo").src = data.videoUrl;
+      const video = document.getElementById("generatedVideo");
+      video.src = data.videoUrl;
+      video.onerror = function () {
+        console.error("Error loading video:", video.error);
+        alert("Error loading video. Please check the console for details.");
+      };
       document.getElementById("result").style.display = "block";
     } else {
       throw new Error("No video URL in response");

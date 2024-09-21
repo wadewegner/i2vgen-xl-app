@@ -71,7 +71,7 @@ def generate_video(image_path, prompt):
         export_to_video(frames, video_path)
         
         logging.info("Video generation complete")
-        return video_path
+        return '/uploads/' + os.path.basename(video_path)
     except Exception as e:
         logging.error(f"Error in generate_video: {str(e)}", exc_info=True)
         return None
