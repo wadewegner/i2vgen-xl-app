@@ -74,6 +74,7 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
       video.oncanplay = function () {
         console.log("Video can start playing");
       };
+      video.load(); // Force the video to load
       document.getElementById("result").style.display = "block";
     } else {
       throw new Error("No video URL in response");

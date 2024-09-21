@@ -87,8 +87,13 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
         .json({ error: "An error occurred while generating the video" });
     }
     console.log("Python script finished");
-    // Assuming the last line of the output is the video path
-    const outputLines = code.split("\n").filter((line) => line.trim() !== "");
+    // Check if code is a string, if not, it might be an array of output lines
+    let outputLines = Array.isArray(code)
+      ? code
+      : typeof code === "string"
+      ? code.split("\n")
+      : [];
+    outputLines = outputLines.filter((line) => line.trim() !== "");
     const videoPath = outputLines[outputLines.length - 1];
     if (videoPath && videoPath.startsWith("/uploads/")) {
       const videoUrl = videoPath;
@@ -100,10 +105,20 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
   });
 });
 
-// Add this route to serve video files
 app.get("/uploads/:filename", (req, res) => {
   const filePath = path.join(__dirname, "..", "uploads", req.params.filename);
-  res.sendFile(filePath);
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      console.error(`File not found: ${filePath}`);
+      return res.status(404).send("File not found");
+    }
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error(`Error sending file: ${err}`);
+        res.status(err.status).end();
+      }
+    });
+  });
 });
 
 wss.on("connection", function connection(ws) {
