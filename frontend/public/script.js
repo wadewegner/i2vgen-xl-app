@@ -11,16 +11,20 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
       body: formData,
     });
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (data.videoUrl) {
       document.getElementById("generatedVideo").src = data.videoUrl;
       document.getElementById("result").style.display = "block";
     } else {
-      alert("Error generating video");
+      throw new Error("No video URL in response");
     }
   } catch (error) {
     console.error("Error:", error);
-    alert("An error occurred while generating the video");
+    alert(`An error occurred: ${error.message}`);
   }
 });

@@ -3,3 +3,4 @@ diffusers
 transformers
 accelerate
 pillow
+python-dotenv
