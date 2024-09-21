@@ -6,6 +6,7 @@ from diffusers import I2VGenXLPipeline
 from PIL import Image
 import logging
 import subprocess
+import torch.amp 
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -40,8 +41,13 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         print(f"Using dtype: {dtype}")
 
         print("Loading I2VGenXLPipeline")
-        pipeline = I2VGenXLPipeline.from_pretrained("ali-vilab/i2vgen-xl", torch_dtype=dtype, variant="fp16" if use_cuda else None, use_auth_token=token)
-        
+        pipeline = I2VGenXLPipeline.from_pretrained(
+            "ali-vilab/i2vgen-xl", 
+            torch_dtype=dtype, 
+            variant="fp16" if use_cuda else None, 
+            token=token  # Changed from use_auth_token to token
+        )
+
         if use_cuda:
             print("Moving pipeline to GPU and enabling memory efficient attention")
             pipeline = pipeline.to("cuda")
@@ -62,11 +68,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         print(f"Device name: {torch.cuda.get_device_name(0)}")
 
         print("Starting pipeline execution")
-        with torch.cuda.amp.autocast(enabled=use_cuda):
-            # Create a progress callback
-            def callback(step, timestep, latents):
-                print(f"Completed step {step + 1}/50")
-
+        with torch.amp.autocast(device_type='cuda' if use_cuda else 'cpu'):
             frames = pipeline(
                 prompt=prompt,
                 image=image,
@@ -74,9 +76,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
                 num_frames=int(num_frames),
                 negative_prompt=negative_prompt,
                 guidance_scale=9.0,
-                generator=generator,
-                callback=callback,
-                callback_steps=1
+                generator=generator
             ).frames[0]
 
         print("Video frame generation complete")
