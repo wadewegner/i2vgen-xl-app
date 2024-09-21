@@ -1,3 +1,33 @@
+let socket;
+
+function connectWebSocket() {
+  socket = new WebSocket("ws://" + window.location.host);
+
+  socket.onmessage = function (event) {
+    const data = JSON.parse(event.data);
+    if (data.type === "log") {
+      appendLog(data.message);
+    }
+  };
+
+  socket.onclose = function (event) {
+    console.log("WebSocket connection closed. Reconnecting...");
+    setTimeout(connectWebSocket, 1000);
+  };
+
+  socket.onerror = function (error) {
+    console.error("WebSocket error:", error);
+  };
+}
+
+function appendLog(message) {
+  const logDiv = document.getElementById("logOutput");
+  logDiv.innerHTML += message + "<br>";
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+connectWebSocket();
+
 document.getElementById("uploadForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -6,6 +36,9 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
   formData.append("prompt", document.getElementById("promptInput").value);
   formData.append("numFrames", document.getElementById("numFrames").value);
   formData.append("frameRate", document.getElementById("frameRate").value);
+
+  // Clear previous log output
+  document.getElementById("logOutput").innerHTML = "";
 
   try {
     const response = await fetch("/generate-video", {

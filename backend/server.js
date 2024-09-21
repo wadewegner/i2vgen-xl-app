@@ -3,9 +3,14 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { PythonShell } = require("python-shell");
+const http = require("http");
+const WebSocket = require("ws");
 require("dotenv").config();
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
 const port = 3000;
 
 app.set("view engine", "ejs");
@@ -62,24 +67,31 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
 
   console.log("Starting video generation process");
 
-  PythonShell.run("videoGenerator.py", options, function (err, results) {
+  const pyshell = new PythonShell("videoGenerator.py", options);
+
+  pyshell.on("message", function (message) {
+    console.log(message);
+    // Broadcast the message to all connected clients
+    wss.clients.forEach(function each(client) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ type: "log", message: message }));
+      }
+    });
+  });
+
+  pyshell.end(function (err, code, signal) {
     if (err) {
       console.error("Python script error:", err);
       return res
         .status(500)
         .json({ error: "An error occurred while generating the video" });
     }
-    console.log("Python script output:", results);
-    const videoUrl = results[results.length - 1]; // The last line should be the video path
+    console.log("Python script finished");
+    const videoUrl = code; // Assuming the last line of output is the video URL
     res.json({ videoUrl: videoUrl });
   });
 });
 
-// Add a route for testing video playback
-app.get("/test-video", (req, res) => {
-  res.sendFile(path.join(__dirname, "test_video.html"));
-});
-
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
