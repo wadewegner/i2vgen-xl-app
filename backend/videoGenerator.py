@@ -2,9 +2,7 @@ import sys
 import os
 from dotenv import load_dotenv
 import torch
-import cv2
 from diffusers import I2VGenXLPipeline
-from diffusers.utils import export_to_video
 from PIL import Image
 import logging
 import subprocess
@@ -67,15 +65,33 @@ def generate_video(image_path, prompt):
             generator=generator
         ).frames[0]
 
+        # Save frames as individual PNG files
+        frames_dir = os.path.join('uploads', 'frames')
+        os.makedirs(frames_dir, exist_ok=True)
+        for i, frame in enumerate(frames):
+            frame.save(os.path.join(frames_dir, f'frame_{i:04d}.png'))
+
+        # Use FFmpeg to create a video from the frames
         video_path = os.path.join('uploads', f"generated_video_{os.path.basename(image_path)}.mp4")
-        frames[0].save(video_path, save_all=True, append_images=frames[1:], duration=100, loop=0)
+        ffmpeg_command = [
+            'ffmpeg',
+            '-framerate', '10',  # Adjust this value to change video speed
+            '-i', os.path.join(frames_dir, 'frame_%04d.png'),
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            '-y',  # Overwrite output file if it exists
+            video_path
+        ]
+        subprocess.run(ffmpeg_command, check=True)
 
-        # Convert the video to a web-compatible format
-        web_compatible_path = os.path.join('uploads', f"web_compatible_{os.path.basename(image_path)}.mp4")
-        subprocess.run(['ffmpeg', '-i', video_path, '-vcodec', 'libx264', '-acodec', 'aac', web_compatible_path])
+        logging.info(f"Video saved to {video_path}")
+        
+        # Clean up individual frame files
+        for file in os.listdir(frames_dir):
+            os.remove(os.path.join(frames_dir, file))
+        os.rmdir(frames_dir)
 
-        logging.info(f"Exported web-compatible video to {web_compatible_path}")
-        return '/uploads/' + os.path.basename(web_compatible_path)
+        return '/uploads/' + os.path.basename(video_path)
     except Exception as e:
         logging.error(f"Error in generate_video: {str(e)}", exc_info=True)
         return None
