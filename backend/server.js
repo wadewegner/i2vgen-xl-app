@@ -49,14 +49,11 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
     args: [imagePath, prompt],
     env: {
       ...process.env,
-      PYTHONUNBUFFERED: "1", // This ensures Python prints are immediately visible
+      PYTHONUNBUFFERED: "1",
     },
   };
 
-  console.log(
-    "HUGGINGFACE_TOKEN:",
-    process.env.HUGGINGFACE_TOKEN ? "Set" : "Not set"
-  );
+  console.log("Starting video generation process");
 
   PythonShell.run("videoGenerator.py", options, function (err, results) {
     if (err) {
@@ -65,8 +62,9 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
         .status(500)
         .json({ error: "An error occurred while generating the video" });
     }
-    console.log("Results:", results);
-    res.json({ videoUrl: results[0] });
+    console.log("Python script output:", results);
+    const videoUrl = results[results.length - 1]; // The last line should be the video path
+    res.json({ videoUrl: videoUrl });
   });
 });
 
