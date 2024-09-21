@@ -17,13 +17,10 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "../frontend/views"));
 app.use(express.static(path.join(__dirname, "../frontend/public")));
 
-// Update the path to the new uploads directory
 const uploadsDir = "/var/www/i2vgen-xl-app/uploads";
 
-// Serve files from the uploads directory
 app.use("/uploads", express.static(uploadsDir));
 
-// Set correct headers for video files
 app.use("/uploads", (req, res, next) => {
   if (path.extname(req.url) === ".mp4") {
     res.setHeader("Content-Type", "video/mp4");
@@ -44,7 +41,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit
+  limits: { fileSize: 50 * 1024 * 1024 },
 });
 
 app.get("/", (req, res) => {
@@ -67,7 +64,7 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
 
   let options = {
     mode: "text",
-    pythonPath: "/root/i2vgen-xl-app/venv/bin/python", // Make sure this path is correct
+    pythonPath: "/root/i2vgen-xl-app/venv/bin/python",
     pythonOptions: ["-u"],
     scriptPath: __dirname,
     args: [imagePath, prompt, numFrames, frameRate],
@@ -81,9 +78,11 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
 
   const pyshell = new PythonShell("videoGenerator.py", options);
 
+  let pythonOutput = [];
+
   pyshell.on("message", function (message) {
     console.log("Python output:", message);
-    // Send this message to all connected WebSocket clients
+    pythonOutput.push(message);
     wss.clients.forEach(function each(client) {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({ type: "log", message: message }));
@@ -102,8 +101,7 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
     console.log("Python script execution completed");
     console.log("Python script exit code:", code);
 
-    // Process the results
-    const videoPathLine = pyshell.messages.find((msg) =>
+    const videoPathLine = pythonOutput.find((msg) =>
       msg.startsWith("FINAL_VIDEO_PATH:")
     );
     console.log("Video path line:", videoPathLine);
@@ -133,13 +131,11 @@ wss.on("connection", (ws) => {
   });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send("Something broke!");
 });
 
-// 404 handler
 app.use((req, res, next) => {
   res.status(404).send("Sorry, that route doesn't exist.");
 });
@@ -148,7 +144,6 @@ server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
 
-// Graceful shutdown
 process.on("SIGTERM", () => {
   console.log("SIGTERM signal received: closing HTTP server");
   server.close(() => {

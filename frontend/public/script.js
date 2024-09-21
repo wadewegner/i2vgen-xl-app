@@ -13,11 +13,10 @@ function connectWebSocket() {
   };
 
   socket.onmessage = function (event) {
-    console.log("Received message:", event.data);
+    console.log("Received WebSocket message:", event.data);
     try {
       const data = JSON.parse(event.data);
       if (data.type === "log") {
-        console.log("Server log:", data.message);
         appendToLog(data.message);
       }
     } catch (error) {
