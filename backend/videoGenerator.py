@@ -84,7 +84,9 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
             frame.save(os.path.join(frames_dir, f'frame_{i:04d}.png'))
 
         # Use FFmpeg to create a video from the frames
-        video_path = os.path.join('uploads', f"generated_video_{os.path.basename(image_path)}.mp4")
+        uploads_dir = '/var/www/i2vgen-xl-app/uploads'
+        video_path = os.path.join(uploads_dir, f"generated_video_{os.path.basename(image_path)}.mp4")
+        
         ffmpeg_command = [
             'ffmpeg',
             '-framerate', str(frame_rate),

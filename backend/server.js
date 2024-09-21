@@ -17,8 +17,11 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "../frontend/views"));
 app.use(express.static(path.join(__dirname, "../frontend/public")));
 
+// Update the path to the new uploads directory
+const uploadsDir = "/var/www/i2vgen-xl-app/uploads";
+
 // Serve files from the uploads directory
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/uploads", express.static(uploadsDir));
 
 // Set correct headers for video files
 app.use("/uploads", (req, res, next) => {
@@ -32,7 +35,7 @@ app.use("/uploads", (req, res, next) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads"));
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -64,7 +67,7 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
 
   let options = {
     mode: "text",
-    pythonPath: "/root/i2vgen-xl-app/venv/bin/python", // Adjust this path to your virtual environment
+    pythonPath: "/root/i2vgen-xl-app/venv/bin/python", // Make sure this path is correct
     pythonOptions: ["-u"],
     scriptPath: __dirname,
     args: [imagePath, prompt, numFrames, frameRate],
@@ -76,26 +79,37 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
 
   console.log("Starting video generation process");
 
-  PythonShell.run("videoGenerator.py", options, function (err, results) {
+  const pyshell = new PythonShell("videoGenerator.py", options);
+
+  pyshell.on("message", function (message) {
+    console.log("Python output:", message);
+    // Send this message to all connected WebSocket clients
+    wss.clients.forEach(function each(client) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ type: "log", message: message }));
+      }
+    });
+  });
+
+  pyshell.end(function (err, code, signal) {
     if (err) {
-      console.error("Error running Python script:", err);
+      console.error("Python script error:", err);
       return res
         .status(500)
         .json({ error: "An error occurred while generating the video" });
     }
 
     console.log("Python script execution completed");
-    console.log("Python script output:", results);
+    console.log("Python script exit code:", code);
 
     // Process the results
-    const videoPathLine = results.find((line) =>
-      line.startsWith("FINAL_VIDEO_PATH:")
-    );
+    const videoPathLine = pyshell.lastOutput;
+    console.log("Last Python output:", videoPathLine);
 
-    if (videoPathLine) {
+    if (videoPathLine && videoPathLine.startsWith("FINAL_VIDEO_PATH:")) {
       const videoPath = videoPathLine.split(":")[1].trim();
       console.log("Generated video path:", videoPath);
-      const videoUrl = "/" + videoPath;
+      const videoUrl = "/uploads/" + path.basename(videoPath);
       console.log("Video URL:", videoUrl);
       res.json({ videoUrl: videoUrl });
     } else {
@@ -117,24 +131,25 @@ wss.on("connection", (ws) => {
   });
 });
 
-// Broadcast function to send messages to all connected clients
-function broadcast(message) {
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(message));
-    }
-  });
-}
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something broke!");
+});
+
+// 404 handler
+app.use((req, res, next) => {
+  res.status(404).send("Sorry, that route doesn't exist.");
+});
 
 server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
 
-// Error handling
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+// Graceful shutdown
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server");
+  server.close(() => {
+    console.log("HTTP server closed");
+  });
 });
