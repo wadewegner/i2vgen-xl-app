@@ -43,11 +43,12 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         pipeline = I2VGenXLPipeline.from_pretrained("ali-vilab/i2vgen-xl", torch_dtype=dtype, variant="fp16" if use_cuda else None, use_auth_token=token)
         
         if use_cuda:
-            logging.info("Enabling model CPU offload")
-            pipeline.enable_model_cpu_offload()
+            logging.info("Moving pipeline to GPU and enabling memory efficient attention")
+            pipeline = pipeline.to("cuda")
+            pipeline.enable_attention_slicing()
         else:
-            logging.info(f"Moving pipeline to {device}")
-            pipeline = pipeline.to(device)
+            logging.info("Using CPU for inference")
+            pipeline = pipeline.to("cpu")
 
         logging.info(f"Loading image from {image_path}")
         image = Image.open(image_path).convert("RGB")
@@ -56,15 +57,22 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         generator = torch.manual_seed(8888)
 
         logging.info(f"Generating video frames: {num_frames} frames")
-        frames = pipeline(
-            prompt=prompt,
-            image=image,
-            num_inference_steps=50,
-            num_frames=int(num_frames),
-            negative_prompt=negative_prompt,
-            guidance_scale=9.0,
-            generator=generator
-        ).frames[0]
+        logging.info(f"CUDA available: {torch.cuda.is_available()}")
+        logging.info(f"Current device: {torch.cuda.current_device()}")
+        logging.info(f"Device name: {torch.cuda.get_device_name(0)}")
+
+        with torch.cuda.amp.autocast(enabled=use_cuda):
+            frames = pipeline(
+                prompt=prompt,
+                image=image,
+                num_inference_steps=50,
+                num_frames=int(num_frames),
+                negative_prompt=negative_prompt,
+                guidance_scale=9.0,
+                generator=generator
+            ).frames[0]
+
+        logging.info("Video frame generation complete")
 
         # Save frames as individual PNG files
         frames_dir = os.path.join('uploads', 'frames')
