@@ -5,6 +5,7 @@ const fs = require("fs");
 const { PythonShell } = require("python-shell");
 const WebSocket = require("ws");
 const http = require("http");
+require("dotenv").config();
 
 const app = express();
 const server = http.createServer(app);
@@ -91,44 +92,38 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
     console.log("Python script finished");
     console.log("Raw output:", pythonOutput);
 
-    // Get the last output line that starts with 'uploads/'
-    const videoPath = pythonOutput
+    // Get the last output line that starts with 'FINAL_VIDEO_PATH:'
+    const videoPathLine = pythonOutput
       .reverse()
-      .find((line) => line.startsWith("uploads/"));
-    console.log("Video path:", videoPath);
+      .find((line) => line.startsWith("FINAL_VIDEO_PATH:"));
+    console.log("Video path line:", videoPathLine);
 
-    if (videoPath) {
-      const videoUrl = "/" + videoPath.trim();
+    if (videoPathLine) {
+      const videoPath = videoPathLine.split(":")[1].trim();
+      const videoUrl = "/" + videoPath;
       console.log("Video URL:", videoUrl);
       res.json({ videoUrl: videoUrl });
     } else {
-      console.error("Invalid video path:", videoPath);
+      console.error("Invalid video path:", videoPathLine);
       res.status(500).json({ error: "Failed to generate video" });
     }
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server is running on port 3000");
-});
-
+// Add this route to serve video files
 app.get("/uploads/:filename", (req, res) => {
   const filePath = path.join(__dirname, "..", "uploads", req.params.filename);
-  fs.access(filePath, fs.constants.F_OK, (err) => {
+  res.sendFile(filePath, (err) => {
     if (err) {
-      console.error(`File not found: ${filePath}`);
-      return res.status(404).send("File not found");
-    }
-    res.sendFile(filePath, (err) => {
-      if (err) {
-        console.error(`Error sending file: ${err}`);
-        res.status(err.status).end();
+      console.error("Error sending file:", err);
+      if (!res.headersSent) {
+        res.status(err.status || 500).end();
       }
-    });
+    }
   });
 });
 
-wss.on("connection", function connection(ws) {
+wss.on("connection", (ws) => {
   console.log("New WebSocket connection");
 });
 
