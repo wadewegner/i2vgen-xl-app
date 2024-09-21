@@ -2,36 +2,50 @@ let socket;
 
 function connectWebSocket() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const host = window.location.host;
+  const host = window.location.hostname;
   const wsUrl = `${protocol}//${host}`;
   console.log(`Attempting to connect to WebSocket at ${wsUrl}`);
   socket = new WebSocket(wsUrl);
 
   socket.onopen = function (event) {
     console.log("WebSocket connection established");
+    appendToLog("WebSocket connection established");
   };
 
   socket.onmessage = function (event) {
-    const data = JSON.parse(event.data);
-    if (data.type === "log") {
-      appendLog(data.message);
+    console.log("Received message:", event.data);
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "log") {
+        console.log("Server log:", data.message);
+        appendToLog(data.message);
+      }
+    } catch (error) {
+      console.error("Error parsing WebSocket message:", error);
+      appendToLog("Error parsing WebSocket message: " + error.message);
     }
   };
 
   socket.onclose = function (event) {
     console.log("WebSocket connection closed. Reconnecting...");
+    appendToLog("WebSocket connection closed. Reconnecting...");
     setTimeout(connectWebSocket, 1000);
   };
 
   socket.onerror = function (error) {
     console.error("WebSocket error:", error);
+    appendToLog("WebSocket error: " + error.message);
   };
 }
 
-function appendLog(message) {
+function appendToLog(message) {
   const logDiv = document.getElementById("logOutput");
-  logDiv.innerHTML += message + "<br>";
-  logDiv.scrollTop = logDiv.scrollHeight;
+  if (logDiv) {
+    logDiv.innerHTML += message + "<br>";
+    logDiv.scrollTop = logDiv.scrollHeight;
+  } else {
+    console.error("Log output element not found");
+  }
 }
 
 connectWebSocket();
@@ -42,8 +56,13 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
   const formData = new FormData(e.target);
 
   // Clear previous log output
-  document.getElementById("logOutput").innerHTML = "";
-  document.getElementById("logOutput").style.display = "block";
+  const logDiv = document.getElementById("logOutput");
+  if (logDiv) {
+    logDiv.innerHTML = "";
+    logDiv.style.display = "block";
+  }
+
+  appendToLog("Starting video generation process...");
 
   // Disable the submit button
   const submitButton = e.target.querySelector('button[type="submit"]');
@@ -62,17 +81,20 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
     const data = await response.json();
 
     if (data.videoUrl) {
+      appendToLog("Video generated successfully");
       const video = document.getElementById("generatedVideo");
       video.src = data.videoUrl;
       video.onerror = function () {
         console.error("Error loading video:", video.error);
-        alert(`Error loading video: ${video.error.message}`);
+        appendToLog(`Error loading video: ${video.error.message}`);
       };
       video.onloadedmetadata = function () {
         console.log("Video metadata loaded successfully");
+        appendToLog("Video metadata loaded successfully");
       };
       video.oncanplay = function () {
         console.log("Video can start playing");
+        appendToLog("Video can start playing");
       };
       document.getElementById("result").style.display = "block";
     } else if (data.error) {
@@ -82,7 +104,7 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
     }
   } catch (error) {
     console.error("Error:", error);
-    alert(`An error occurred: ${error.message}`);
+    appendToLog(`An error occurred: ${error.message}`);
   } finally {
     // Re-enable the submit button
     submitButton.disabled = false;
