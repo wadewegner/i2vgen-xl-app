@@ -22,7 +22,13 @@ document.getElementById("uploadForm").addEventListener("submit", async (e) => {
       video.src = data.videoUrl;
       video.onerror = function () {
         console.error("Error loading video:", video.error);
-        alert("Error loading video. Please check the console for details.");
+        alert(`Error loading video: ${video.error.message}`);
+      };
+      video.onloadedmetadata = function () {
+        console.log("Video metadata loaded successfully");
+      };
+      video.oncanplay = function () {
+        console.log("Video can start playing");
       };
       document.getElementById("result").style.display = "block";
     } else {

@@ -3,6 +3,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { PythonShell } = require("python-shell");
+const https = require("https");
 require("dotenv").config();
 
 const app = express();
@@ -15,10 +16,12 @@ app.use(express.static(path.join(__dirname, "../frontend/public")));
 // Serve files from the uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-// Set correct MIME type for mp4 files
+// Set correct headers for video files
 app.use("/uploads", (req, res, next) => {
   if (path.extname(req.url) === ".mp4") {
     res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Cache-Control", "public, max-age=3600");
   }
   next();
 });
@@ -73,6 +76,11 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+const options = {
+  key: fs.readFileSync("path/to/your/key.pem"),
+  cert: fs.readFileSync("path/to/your/cert.pem"),
+};
+
+https.createServer(options, app).listen(port, () => {
+  console.log(`HTTPS Server running at https://localhost:${port}`);
 });

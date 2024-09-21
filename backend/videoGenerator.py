@@ -7,6 +7,7 @@ from diffusers import I2VGenXLPipeline
 from diffusers.utils import export_to_video
 from PIL import Image
 import logging
+import subprocess
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -67,11 +68,14 @@ def generate_video(image_path, prompt):
         ).frames[0]
 
         video_path = os.path.join('uploads', f"generated_video_{os.path.basename(image_path)}.mp4")
-        logging.info(f"Exporting video to {video_path}")
-        export_to_video(frames, video_path)
-        
-        logging.info("Video generation complete")
-        return '/uploads/' + os.path.basename(video_path)
+        frames[0].save(video_path, save_all=True, append_images=frames[1:], duration=100, loop=0)
+
+        # Convert the video to a web-compatible format
+        web_compatible_path = os.path.join('uploads', f"web_compatible_{os.path.basename(image_path)}.mp4")
+        subprocess.run(['ffmpeg', '-i', video_path, '-vcodec', 'libx264', '-acodec', 'aac', web_compatible_path])
+
+        logging.info(f"Exported web-compatible video to {web_compatible_path}")
+        return '/uploads/' + os.path.basename(web_compatible_path)
     except Exception as e:
         logging.error(f"Error in generate_video: {str(e)}", exc_info=True)
         return None
