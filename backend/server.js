@@ -3,7 +3,6 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { PythonShell } = require("python-shell");
-const https = require("https");
 require("dotenv").config();
 
 const app = express();
@@ -76,11 +75,11 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
   });
 });
 
-const options = {
-  key: fs.readFileSync("path/to/your/key.pem"),
-  cert: fs.readFileSync("path/to/your/cert.pem"),
-};
+// Add a route for testing video playback
+app.get("/test-video", (req, res) => {
+  res.sendFile(path.join(__dirname, "test_video.html"));
+});
 
-https.createServer(options, app).listen(port, () => {
-  console.log(`HTTPS Server running at https://localhost:${port}`);
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
 });
