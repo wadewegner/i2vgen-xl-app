@@ -52,6 +52,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
             logging.info("Moving pipeline to GPU and enabling memory efficient attention")
             pipeline = pipeline.to("cuda")
             pipeline.enable_attention_slicing()
+            pipeline.enable_gradient_checkpointing()
         else:
             logging.info("Using CPU for inference")
             pipeline = pipeline.to("cpu")
@@ -72,7 +73,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         # Resize image
         image = image.resize((video_width, video_height), Image.LANCZOS)
 
-        negative_prompt = "Distorted, discontinuous, Ugly, blurry, low resolution, motionless, static, disfigured, disconnected limbs, Ugly faces, incomplete arms"
+        negative_prompt = "Distorted, discontinuous, Ugly, blurry, low detail, unrealistic distortions, low resolution, motionless, static, disfigured, disconnected limbs, Ugly faces, incomplete arms"
         generator = torch.manual_seed(8888)
 
         logging.info(f"Generating video frames: {num_frames} frames")
@@ -85,10 +86,10 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
             frames = pipeline(
                 prompt=prompt,
                 image=image,
-                num_inference_steps=50,
+                num_inference_steps=100,
                 num_frames=int(num_frames),
                 negative_prompt=negative_prompt,
-                guidance_scale=9.0,
+                guidance_scale=12.0,
                 generator=generator,
                 width=video_width,
                 height=video_height
