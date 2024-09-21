@@ -103,10 +103,12 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
     console.log("Python script exit code:", code);
 
     // Process the results
-    const videoPathLine = pyshell.lastOutput;
-    console.log("Last Python output:", videoPathLine);
+    const videoPathLine = pyshell.messages.find((msg) =>
+      msg.startsWith("FINAL_VIDEO_PATH:")
+    );
+    console.log("Video path line:", videoPathLine);
 
-    if (videoPathLine && videoPathLine.startsWith("FINAL_VIDEO_PATH:")) {
+    if (videoPathLine) {
       const videoPath = videoPathLine.split(":")[1].trim();
       console.log("Generated video path:", videoPath);
       const videoUrl = "/uploads/" + path.basename(videoPath);
