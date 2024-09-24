@@ -29,6 +29,7 @@ from PIL import Image
 import logging
 import imageio
 import numpy as np
+import subprocess
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -97,10 +98,28 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         logging.info(f"Current device: {torch.cuda.current_device()}")
         logging.info(f"Device name: {torch.cuda.get_device_name(0)}")
 
-        logging.info("Starting pipeline execution")
+        uploads_dir = '/var/www/i2vgen-xl-app/uploads'
+
+        # Generate a single test image
+        logging.info("Generating a single test image")
+        single_image = pipeline(
+            prompt=prompt,
+            image=image,
+            negative_prompt=negative_prompt,
+            num_inference_steps=50,
+            guidance_scale=7.5,
+            generator=generator
+        ).images[0]
+
+        single_image_path = os.path.join(uploads_dir, "single_generated_image.png")
+        single_image.save(single_image_path)
+        logging.info(f"Saved single generated image to {single_image_path}")
+
+        logging.info("Starting pipeline execution for video frames")
         video_frames = []
         with torch.amp.autocast(device_type=device):
-            for _ in range(num_frames):
+            for i in range(num_frames):
+                logging.info(f"Generating frame {i+1}/{num_frames}")
                 frame = pipeline(
                     prompt=prompt,
                     image=image,
@@ -110,22 +129,29 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
                     generator=generator
                 ).images[0]
                 video_frames.append(frame)
+                
+                # Save each frame as an image
+                frame_path = os.path.join(uploads_dir, f"frame_{i:04d}.png")
+                frame.save(frame_path)
+                logging.info(f"Saved frame to {frame_path}")
 
         logging.info("Video frame generation complete")
 
-        # Convert frames to numpy arrays
-        video_frames_np = [np.array(frame) for frame in video_frames]
-
-        # Use imageio to create a video from the frames
-        uploads_dir = '/var/www/i2vgen-xl-app/uploads'
+        # Use ffmpeg to create a video from the frames
         video_path = os.path.join(uploads_dir, f"generated_video_{os.path.basename(image_path)}.mp4")
         
-        writer = imageio.get_writer(video_path, fps=frame_rate)
-        for frame in video_frames_np:
-            writer.append_data(frame)
-        writer.close()
-
+        logging.info("Starting video creation using ffmpeg")
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-framerate', str(frame_rate),
+            '-i', os.path.join(uploads_dir, 'frame_%04d.png'),
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            video_path
+        ]
+        subprocess.run(ffmpeg_cmd, check=True)
         logging.info(f"Video saved to {video_path}")
+
         print(f"FINAL_VIDEO_PATH:{video_path}")
 
         return video_path
