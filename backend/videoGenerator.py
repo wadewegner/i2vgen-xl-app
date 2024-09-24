@@ -26,9 +26,10 @@ from dotenv import load_dotenv
 import torch
 import torch.amp
 from diffusers import CogVideoXImageToVideoPipeline
-from diffusers.utils import export_to_video
 from PIL import Image
 import logging
+import imageio
+import numpy as np
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -100,7 +101,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
 
         logging.info("Starting pipeline execution")
         with torch.amp.autocast(device_type=device):
-            video = pipeline(
+            video_frames = pipeline(
                 prompt=prompt,
                 image=image,
                 num_inference_steps=50,
@@ -112,11 +113,17 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
 
         logging.info("Video frame generation complete")
 
-        # Use export_to_video to create a video from the frames
+        # Convert frames to numpy arrays
+        video_frames_np = [np.array(frame) for frame in video_frames]
+
+        # Use imageio to create a video from the frames
         uploads_dir = '/var/www/i2vgen-xl-app/uploads'
         video_path = os.path.join(uploads_dir, f"generated_video_{os.path.basename(image_path)}.mp4")
         
-        export_to_video(video, video_path, fps=frame_rate)
+        writer = imageio.get_writer(video_path, fps=frame_rate)
+        for frame in video_frames_np:
+            writer.append_data(frame)
+        writer.close()
 
         logging.info(f"Video saved to {video_path}")
         print(f"FINAL_VIDEO_PATH:{video_path}")
@@ -125,7 +132,6 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
     except Exception as e:
         logging.error(f"Error in generate_video: {str(e)}", exc_info=True)
         return None
-
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:
