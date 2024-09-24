@@ -4,3 +4,4 @@ transformers
 accelerate
 pillow
 python-dotenv
+imageio-ffmpeg
