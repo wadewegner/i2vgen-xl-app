@@ -82,18 +82,9 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         logging.info(f"Loading image from {image_path}")
         image = Image.open(image_path).convert("RGB")
         
-        # Determine aspect ratio
-        width, height = image.size
-        aspect_ratio = width / height
-        
-        # Set video dimensions based on aspect ratio
-        if aspect_ratio > 1:  # Landscape
-            video_width, video_height = 512, int(512 / aspect_ratio)
-        else:  # Portrait or square
-            video_width, video_height = int(512 * aspect_ratio), 512
-        
-        # Resize image
-        image = image.resize((video_width, video_height), Image.LANCZOS)
+        # Resize image to 512x512 (default resolution for the model)
+        image = image.resize((512, 512), Image.LANCZOS)
+        logging.info(f"Resized image to 512x512")
 
         negative_prompt = "Distorted, discontinuous, Ugly, blurry, low detail, unrealistic distortions, low resolution, motionless, static, disfigured, disconnected limbs, Ugly faces, incomplete arms"
         generator = torch.Generator(device=device).manual_seed(8888)
@@ -116,9 +107,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
                 num_frames=num_frames,
                 negative_prompt=negative_prompt,
                 guidance_scale=6.0,
-                generator=generator,
-                width=video_width,
-                height=video_height
+                generator=generator
             ).frames[0]
 
         logging.info("Video frame generation complete")
@@ -136,6 +125,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
     except Exception as e:
         logging.error(f"Error in generate_video: {str(e)}", exc_info=True)
         return None
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:
