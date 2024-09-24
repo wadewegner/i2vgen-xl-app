@@ -6,3 +6,5 @@ pillow
 python-dotenv
 imageio-ffmpeg
 sentencepiece==0.1.99
+imageio
+numpy
