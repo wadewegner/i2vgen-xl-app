@@ -98,6 +98,10 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
         negative_prompt = "Distorted, discontinuous, Ugly, blurry, low detail, unrealistic distortions, low resolution, motionless, static, disfigured, disconnected limbs, Ugly faces, incomplete arms"
         generator = torch.Generator(device=device).manual_seed(8888)
 
+        # Limit the number of frames to 48
+        num_frames = min(int(num_frames), 48)
+        logging.info(f"Adjusted number of frames: {num_frames}")
+
         logging.info(f"Generating video frames: {num_frames} frames")
         logging.info(f"CUDA available: {torch.cuda.is_available()}")
         logging.info(f"Current device: {torch.cuda.current_device()}")
@@ -109,7 +113,7 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
                 prompt=prompt,
                 image=image,
                 num_inference_steps=50,
-                num_frames=int(num_frames),
+                num_frames=num_frames,
                 negative_prompt=negative_prompt,
                 guidance_scale=6.0,
                 generator=generator,
