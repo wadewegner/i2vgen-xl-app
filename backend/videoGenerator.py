@@ -1,5 +1,27 @@
 import sys
 import os
+
+# Add these lines at the beginning of the file
+print("Python version:", sys.version)
+print("Python path:", sys.path)
+print("Working directory:", os.getcwd())
+
+sys.path.append('/usr/local/lib/python3.10/dist-packages')
+sys.path.append('/root/i2vgen-xl-app/venv/lib/python3.10/site-packages')
+os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH', '') + ':/usr/local/lib/python3.10/dist-packages:/root/i2vgen-xl-app/venv/lib/python3.10/site-packages'
+
+try:
+    import sentencepiece
+    print("SentencePiece version:", sentencepiece.__version__)
+except ImportError as e:
+    print("Failed to import SentencePiece:", e)
+
+try:
+    from transformers import T5Tokenizer
+    print("T5Tokenizer imported successfully")
+except ImportError as e:
+    print("Failed to import T5Tokenizer:", e)
+
 from dotenv import load_dotenv
 import torch
 import torch.amp

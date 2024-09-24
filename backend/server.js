@@ -71,6 +71,9 @@ app.post("/generate-video", upload.single("image"), (req, res) => {
     env: {
       ...process.env,
       PYTHONUNBUFFERED: "1",
+      PYTHONPATH:
+        (process.env.PYTHONPATH || "") +
+        ":/usr/local/lib/python3.10/dist-packages:/root/i2vgen-xl-app/venv/lib/python3.10/site-packages",
     },
   };
 
