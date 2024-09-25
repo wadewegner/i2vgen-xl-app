@@ -135,7 +135,22 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
                 frame.save(frame_path)
                 logging.info(f"Saved frame to {frame_path}")
 
+                # Check frame content
+                frame_array = np.array(frame)
+                if np.all(frame_array == 0):
+                    logging.warning(f"Frame {i} is completely black")
+                else:
+                    logging.info(f"Frame {i} has content (min: {frame_array.min()}, max: {frame_array.max()})")
+
         logging.info("Video frame generation complete")
+
+        # Save first and last frames separately
+        first_frame_path = os.path.join(uploads_dir, "first_frame.png")
+        last_frame_path = os.path.join(uploads_dir, "last_frame.png")
+        video_frames[0].save(first_frame_path)
+        video_frames[-1].save(last_frame_path)
+        logging.info(f"Saved first frame to {first_frame_path}")
+        logging.info(f"Saved last frame to {last_frame_path}")
 
         # Use ffmpeg to create a video from the frames
         video_path = os.path.join(uploads_dir, f"generated_video_{os.path.basename(image_path)}.mp4")
@@ -147,10 +162,20 @@ def generate_video(image_path, prompt, num_frames, frame_rate):
             '-i', os.path.join(uploads_dir, 'frame_%04d.png'),
             '-c:v', 'libx264',
             '-pix_fmt', 'yuv420p',
+            '-v', 'verbose',  # Add verbose output
             video_path
         ]
-        subprocess.run(ffmpeg_cmd, check=True)
-        logging.info(f"Video saved to {video_path}")
+        result = subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
+        logging.info(f"FFmpeg output: {result.stdout}")
+        logging.error(f"FFmpeg errors: {result.stderr}")
+
+        if os.path.exists(video_path):
+            video_size = os.path.getsize(video_path)
+            logging.info(f"Generated video file size: {video_size} bytes")
+            if video_size == 0:
+                logging.error("Generated video file is empty")
+        else:
+            logging.error("Video file was not created")
 
         print(f"FINAL_VIDEO_PATH:{video_path}")
 
